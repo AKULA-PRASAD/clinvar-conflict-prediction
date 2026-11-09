@@ -12,7 +12,7 @@
 <meta name="author" content="Prasad Akula" />
 
 
-<title>Predicting Conflicting Clinical Interpretations of Genetic Variants</title>
+<title>Predicting Conflicting ClinVar Variant Interpretations with Machine Learning</title>
 
 <script>// Pandoc 2.9 adds attributes on both header and div. We remove the former (to
 // be compatible with the behavior of Pandoc < 2.8).
@@ -2839,13 +2839,13 @@ font-size: 0.95em;
 
 
 
-<h1 class="title toc-ignore">Predicting Conflicting Clinical
-Interpretations of Genetic Variants</h1>
-<h3 class="subtitle">DA5030 – Signature Project (revised November 2026:
-leakage-safe cross-validation, out-of-fold stacking, gene-grouped
-check)</h3>
+<h1 class="title toc-ignore">Predicting Conflicting ClinVar Variant
+Interpretations with Machine Learning</h1>
+<h3 class="subtitle">Leakage-safe cross-validation, out-of-fold stacking
+and gene-grouped validation in R (caret) · 65,188 variants</h3>
 <h4 class="author">Prasad Akula</h4>
-<h4 class="date">Spring 2026; revised November 2026</h4>
+<h4 class="date">November 2026 (first developed as a Northeastern
+University DA5030 course project, Spring 2026)</h4>
 
 </div>
 
@@ -2859,14 +2859,14 @@ check)</h3>
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a>  <span class="at">fig.height =</span> <span class="dv">5</span></span>
 <span id="cb1-8"><a href="#cb1-8" tabindex="-1"></a>)</span>
 <span id="cb1-9"><a href="#cb1-9" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">123</span>)</span></code></pre></div>
-<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidyverse)     <span class="co"># data wrangling and ggplot2 (Module 02)</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(caret)         <span class="co"># createDataPartition, upSample, preProcess, trainControl (Module 09)</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">library</span>(corrplot)      <span class="co"># correlation heatmap (Module 02)</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">library</span>(rpart)         <span class="co"># decision tree CART algorithm (Module 07)</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">library</span>(rpart.plot)    <span class="co"># decision tree visualization (Module 07)</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">library</span>(randomForest)  <span class="co"># random forest ensemble (Module 09)</span></span>
-<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">library</span>(e1071)         <span class="co"># SVM and probability calibration (caret dependency, Module 09)</span></span>
-<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">library</span>(ipred)         <span class="co"># bagging with homogeneous learners (Module 09)</span></span></code></pre></div>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="fu">library</span>(tidyverse)     <span class="co"># data wrangling and ggplot2</span></span>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="fu">library</span>(caret)         <span class="co"># createDataPartition, upSample, preProcess, trainControl</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a><span class="fu">library</span>(corrplot)      <span class="co"># correlation heatmap</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="fu">library</span>(rpart)         <span class="co"># decision tree CART algorithm</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="fu">library</span>(rpart.plot)    <span class="co"># decision tree visualization</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="fu">library</span>(randomForest)  <span class="co"># random forest ensemble</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="fu">library</span>(e1071)         <span class="co"># SVM and probability calibration</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="fu">library</span>(ipred)         <span class="co"># bagging with homogeneous learners</span></span></code></pre></div>
 <hr />
 <div id="business-understanding" class="section level1" number="1">
 <h1><span class="header-section-number">1</span> Business
@@ -2884,8 +2884,7 @@ features. CLASS = 1 means Conflicting and CLASS = 0 means Concordant.
 Identifying high-risk variants early could help labs prioritize
 additional review before issuing a final report.</p>
 <p>Dataset sourced from Kaggle: <a href="https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting" class="uri">https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting</a></p>
-<p>This project follows the CRISP-DM process introduced in Module 02,
-drawing on techniques from Modules 04 through 09.</p>
+<p>The analysis follows the CRISP-DM process:</p>
 <table>
 <colgroup>
 <col width="33%" />
@@ -2895,43 +2894,47 @@ drawing on techniques from Modules 04 through 09.</p>
 <thead>
 <tr class="header">
 <th>CRISP-DM Phase</th>
-<th>Project Section</th>
-<th>DA5030 Module</th>
+<th>Project Sections</th>
+<th>Methods</th>
 </tr>
 </thead>
 <tbody>
 <tr class="odd">
 <td>Business Understanding</td>
-<td>Problem Definition</td>
-<td>Module 02</td>
+<td>Problem definition</td>
+<td>Why conflicting interpretations matter</td>
 </tr>
 <tr class="even">
 <td>Data Understanding</td>
-<td>Exploration and Distributions</td>
-<td>Module 02</td>
+<td>Exploration and distributions</td>
+<td>Missingness, class balance, distributions</td>
 </tr>
 <tr class="odd">
 <td>Data Preparation</td>
-<td>Imputation, Encoding, Scaling</td>
-<td>Module 04</td>
+<td>Imputation, encoding, scaling</td>
+<td>Random-forest imputation, IQR capping, feature engineering (all fit
+on training data)</td>
 </tr>
 <tr class="even">
 <td>Modeling</td>
-<td>Three Models and Ensemble</td>
-<td>Modules 07, 08, 09</td>
+<td>Three models and ensembles</td>
+<td>Logistic regression, CART, random forest, bagging, majority vote,
+out-of-fold stacking</td>
 </tr>
 <tr class="odd">
 <td>Evaluation</td>
-<td>Confusion Matrix, Accuracy, Recall, Precision</td>
-<td>Module 09</td>
+<td>Test-set and cross-validated metrics</td>
+<td>AUC, AUPRC, recall, precision, F1, gene-grouped
+cross-validation</td>
 </tr>
 </tbody>
 </table>
 <p>Because concordant variants make up the large majority of the
 dataset, a classifier that always predicts concordant would look
-accurate while catching zero conflicting variants. This is why recall
-and precision are the primary evaluation metrics here — they penalize a
-model that ignores the minority class.</p>
+accurate while catching zero conflicting variants. The evaluation
+therefore uses threshold-free ranking metrics (AUC, and AUPRC compared
+with the prevalence) together with recall and precision, not accuracy
+alone.</p>
 <hr />
 </div>
 <div id="data-acquisition" class="section level1" number="2">
@@ -3342,7 +3345,7 @@ other complete columns as predictors. This is functionally equivalent to
 the <code>missForest</code> algorithm and satisfies the rubric’s “ML
 imputation = Fully” criterion. All imputation models are fitted
 exclusively on the training set and applied to the test set to prevent
-data leakage (Module 04).</p>
+data leakage.</p>
 <div id="step-1-drop-uninformative-columns" class="section level2" number="5.1">
 <h2><span class="header-section-number">5.1</span> Step 1 — Drop
 uninformative columns</h2>
@@ -3578,9 +3581,8 @@ throughout the pipeline.</p>
 </div>
 <div id="outlier-handling" class="section level1" number="6">
 <h1><span class="header-section-number">6</span> Outlier Handling</h1>
-<p>Outliers are capped using the IQR method introduced in Module 04.
-Bounds are computed from the training set and applied to both sets to
-maintain consistency.</p>
+<p>Outliers are capped using the IQR method. Bounds are computed from
+the training set and applied to both sets to maintain consistency.</p>
 <div class="sourceCode" id="cb95"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb95-1"><a href="#cb95-1" tabindex="-1"></a><span class="co"># Compute IQR fences from training set only</span></span>
 <span id="cb95-2"><a href="#cb95-2" tabindex="-1"></a>num_cols_out <span class="ot">&lt;-</span> <span class="fu">setdiff</span>(<span class="fu">names</span>(train)[<span class="fu">sapply</span>(train, is.numeric)], <span class="st">&quot;CLASS&quot;</span>)</span>
 <span id="cb95-3"><a href="#cb95-3" tabindex="-1"></a>total_capped <span class="ot">&lt;-</span> <span class="dv">0</span></span>
@@ -3729,7 +3731,7 @@ the same spike-at-zero pattern in the distribution analysis.</p>
 Engineering</h1>
 <p>Two new features are created to compress information from the allele
 frequency columns and flag variants with unusually low population
-frequency. Feature engineering is covered in Module 04.</p>
+frequency.</p>
 <p><strong>Important:</strong> The rarity threshold is computed from the
 non-zero values of <code>avg_AF</code> in the training set. Using plain
 <code>quantile(avg_AF, 0.25)</code> would return zero when most variants
@@ -3903,7 +3905,7 @@ across all models.</p>
 <h1><span class="header-section-number">12</span> Correlation
 Analysis</h1>
 <p>We examine pairwise correlations among numeric features to decide a
-cutoff for removing redundant variables (Module 02).</p>
+cutoff for removing redundant variables.</p>
 <div class="sourceCode" id="cb143"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb143-1"><a href="#cb143-1" tabindex="-1"></a>num_feat <span class="ot">&lt;-</span> <span class="fu">head</span>(<span class="fu">setdiff</span>(<span class="fu">names</span>(train)[<span class="fu">sapply</span>(train, is.numeric)], <span class="st">&quot;CLASS&quot;</span>), <span class="dv">20</span>)</span>
 <span id="cb143-2"><a href="#cb143-2" tabindex="-1"></a>corr_mat <span class="ot">&lt;-</span> <span class="fu">cor</span>(train[, num_feat], <span class="at">use =</span> <span class="st">&quot;pairwise.complete.obs&quot;</span>)</span>
 <span id="cb143-3"><a href="#cb143-3" tabindex="-1"></a></span>
@@ -4026,7 +4028,7 @@ scale controlled for the logistic regression model.</p>
 Handling</h1>
 <p>Upsampling is applied to the training data to create a balanced
 dataset for model training. The test set is left unchanged so that
-evaluation reflects realistic class conditions (Module 09).</p>
+evaluation reflects realistic class conditions.</p>
 <div class="sourceCode" id="cb163"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb163-1"><a href="#cb163-1" tabindex="-1"></a><span class="co"># Upsample the minority class in the training set (test set left unchanged)</span></span>
 <span id="cb163-2"><a href="#cb163-2" tabindex="-1"></a>train_bal <span class="ot">&lt;-</span> <span class="fu">upSample</span>(</span>
 <span id="cb163-3"><a href="#cb163-3" tabindex="-1"></a>  <span class="at">x     =</span> train[, <span class="fu">setdiff</span>(<span class="fu">names</span>(train), <span class="st">&quot;CLASS&quot;</span>)],</span>
@@ -4071,9 +4073,9 @@ conditions rather than an artificially balanced scenario.</p>
 <h1><span class="header-section-number">16</span> Chi-Square Test for
 Feature Association</h1>
 <p>Chi-square tests check whether low-cardinality (categorical-like)
-features show a marginal statistical association with the target (Module
-02). They use the original training set, not the upsampled one:
-duplicated rows would inflate the test statistic.</p>
+features show a marginal statistical association with the target. They
+use the original training set, not the upsampled one: duplicated rows
+would inflate the test statistic.</p>
 <p><em>Revision note:</em> the earlier version selected columns with
 <code>is.integer()</code>, but scaling had already converted every
 encoded column to a decimal type, so the test silently ran on zero
@@ -4214,7 +4216,7 @@ suited.</p>
 <div id="cluster-analysis" class="section level1" number="18">
 <h1><span class="header-section-number">18</span> Cluster Analysis</h1>
 <p>K-means clustering explores whether the data forms natural groups
-based on feature similarity (Module 12).</p>
+based on feature similarity.</p>
 <div id="elbow-plot-for-k-selection" class="section level2" number="18.1">
 <h2><span class="header-section-number">18.1</span> Elbow Plot for K
 Selection</h2>
@@ -4399,9 +4401,9 @@ optimistic.</p>
 <h2><span class="header-section-number">19.1</span> Model A: Logistic
 Regression</h2>
 <p>Logistic regression models the log-odds of the outcome as a linear
-combination of the predictor features (Module 08). It is the fundamental
-linear classifier baseline and provides interpretable coefficients that
-show which features drive the classification.</p>
+combination of the predictor features. It is the fundamental linear
+classifier baseline and provides interpretable coefficients that show
+which features drive the classification.</p>
 <div class="sourceCode" id="cb212"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb212-1"><a href="#cb212-1" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">111</span>)</span>
 <span id="cb212-2"><a href="#cb212-2" tabindex="-1"></a>model_glm <span class="ot">&lt;-</span> <span class="fu">train</span>(</span>
 <span id="cb212-3"><a href="#cb212-3" tabindex="-1"></a>  CLASS <span class="sc">~</span> .,</span>
@@ -4502,9 +4504,9 @@ contain no duplicated rows.</p>
 <h2><span class="header-section-number">19.2</span> Model B: Decision
 Tree</h2>
 <p>Decision trees partition the feature space using a series of binary
-splits chosen to maximize class purity (Module 07). The complexity
-parameter <code>cp</code> controls how deep the tree grows and is tuned
-using 5-fold cross-validation.</p>
+splits chosen to maximize class purity. The complexity parameter
+<code>cp</code> controls how deep the tree grows and is tuned using
+5-fold cross-validation.</p>
 <div class="sourceCode" id="cb227"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb227-1"><a href="#cb227-1" tabindex="-1"></a>cp_grid <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">cp =</span> <span class="fu">c</span>(<span class="fl">0.0001</span>, <span class="fl">0.001</span>, <span class="fl">0.01</span>))</span>
 <span id="cb227-2"><a href="#cb227-2" tabindex="-1"></a></span>
 <span id="cb227-3"><a href="#cb227-3" tabindex="-1"></a><span class="fu">set.seed</span>(<span class="dv">333</span>)</span>
@@ -4560,10 +4562,10 @@ class.</p>
 <h2><span class="header-section-number">19.3</span> Model C: Random
 Forest</h2>
 <p>A random forest is an ensemble of decision trees that improves
-stability and reduces variance (Module 09). The key mechanism is that
-each tree is trained on a bootstrap sample of the training data and each
-split considers only a random subset of <code>mtry</code> features,
-which decorrelates the individual trees.</p>
+stability and reduces variance. The key mechanism is that each tree is
+trained on a bootstrap sample of the training data and each split
+considers only a random subset of <code>mtry</code> features, which
+decorrelates the individual trees.</p>
 <div class="sourceCode" id="cb236"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb236-1"><a href="#cb236-1" tabindex="-1"></a>n_feat    <span class="ot">&lt;-</span> <span class="fu">length</span>(features)</span>
 <span id="cb236-2"><a href="#cb236-2" tabindex="-1"></a>mtry_grid <span class="ot">&lt;-</span> <span class="fu">expand.grid</span>(<span class="at">mtry =</span> <span class="fu">c</span>(<span class="fu">floor</span>(<span class="fu">sqrt</span>(n_feat)),</span>
 <span id="cb236-3"><a href="#cb236-3" tabindex="-1"></a>                                   <span class="fu">min</span>(n_feat, <span class="fu">floor</span>(<span class="fu">sqrt</span>(n_feat) <span class="sc">*</span> <span class="dv">2</span>))))</span>
@@ -5046,7 +5048,7 @@ Ensemble</h1>
 <strong>same</strong> model type on different bootstrap samples and
 combines their predictions by majority vote. This reduces variance
 without increasing bias. The <code>ipred::bagging()</code> function
-implements bagging over decision trees (Module 09).</p>
+implements bagging over decision trees.</p>
 <p>Each bootstrap sample is drawn with replacement from the training
 data, so each bagged tree sees a slightly different dataset. Predictions
 are aggregated by majority vote across all trees.</p>
@@ -5174,7 +5176,7 @@ its own internal aggregation.</p>
 models and a new data frame, and returns a factor prediction based on
 majority vote across all three base models. This is the required
 interface: <code>function(models, data)</code>.</p>
-<div class="sourceCode" id="cb329"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb329-1"><a href="#cb329-1" tabindex="-1"></a><span class="co"># Heterogeneous stacked ensemble as a reusable function (Module 09)</span></span>
+<div class="sourceCode" id="cb329"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb329-1"><a href="#cb329-1" tabindex="-1"></a><span class="co"># Heterogeneous stacked ensemble as a reusable function</span></span>
 <span id="cb329-2"><a href="#cb329-2" tabindex="-1"></a><span class="co"># Arguments:</span></span>
 <span id="cb329-3"><a href="#cb329-3" tabindex="-1"></a><span class="co">#   models  -- named list of caret/rpart/randomForest model objects</span></span>
 <span id="cb329-4"><a href="#cb329-4" tabindex="-1"></a><span class="co">#   newdata -- data frame of new observations to predict</span></span>

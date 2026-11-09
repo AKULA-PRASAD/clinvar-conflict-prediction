@@ -1,8 +1,12 @@
-# Predicting conflicting clinical interpretations of genetic variants (ClinVar)
+# Predicting Conflicting ClinVar Variant Interpretations with Machine Learning
 
-A machine-learning pipeline in R that predicts whether a ClinVar variant has **conflicting clinical interpretations** between submitting laboratories, from 65,188 variants in the public [Kaggle ClinVar-conflicting dataset](https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting) (25.2% conflicting). It began as my DA5030 (Introduction to Data Mining and Machine Learning, Northeastern University) signature project in Spring 2026. It was revised in November 2026 to fix leakage in cross-validation, implement genuine out-of-fold stacking, and test how much performance depends on recognising genes seen in training.
+When clinical laboratories classify the same genetic variant differently, for example one calls it pathogenic and another benign, ClinVar marks it as having **conflicting interpretations**. Those variants are hard to act on in genetic testing. This project builds and validates machine-learning models in R that predict which variants will be conflicting, using 65,188 variants from the public [Kaggle ClinVar-conflicting dataset](https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting) (25.2% conflicting). Features include allele frequencies (ESP, ExAC, 1000 Genomes), predicted functional impact (SIFT, PolyPhen, CADD, LoFtool) and variant annotation.
 
-**Report:** https://akula-prasad.github.io/clinvar-conflict-ml/ (rendered from [`analysis.Rmd`](analysis.Rmd))
+**Skills shown:** R (tidyverse, caret, randomForest, rpart) · imputation and feature engineering for high-missingness genomic annotations · class imbalance · leakage-safe cross-validation · logistic regression, decision trees, random forests, bagging, stacking · AUC and AUPRC evaluation · grouped validation · reproducible R Markdown.
+
+**Report:** https://akula-prasad.github.io/clinvar-conflict-prediction/ (rendered from [`analysis.Rmd`](analysis.Rmd))
+
+*Origin:* first developed as my DA5030 (Introduction to Data Mining and Machine Learning, Northeastern University) course project in Spring 2026. Revised in November 2026 to fix leakage in cross-validation, implement genuine out-of-fold stacking, and test how much performance depends on recognising genes seen in training.
 
 ## Results (held-out 30% test set)
 

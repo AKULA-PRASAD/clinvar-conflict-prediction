@@ -72,6 +72,10 @@ The data (`data/clinvar_conflicting.csv.zip`, 3.7 MB) is downloaded on first run
 - **Single split:** one random train/test split, so the gene-grouped check is the better guide to performance on unseen genes.
 - **Not for clinical use.**
 
+## Licence
+
+MIT ([`LICENSE`](LICENSE)). It covers the code and documentation in this repository. The ClinVar-derived dataset is not redistributed here; it keeps its own terms (see the [Kaggle dataset page](https://www.kaggle.com/datasets/kevinarvai/clinvar-conflicting) and [ClinVar](https://www.ncbi.nlm.nih.gov/clinvar/)).
+
 ## Layout
 
 | Path | Contents |
